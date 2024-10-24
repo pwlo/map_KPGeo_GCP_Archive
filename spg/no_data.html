@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>In preparation</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: #fff;
+      height: 100%;
+      width: 100%;
+      font-family: 'Open Sans', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      background: rgba(131, 131, 131, 0.5);
+      position: relative;
+    }
+
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      background: url("no_worries.jpg") no-repeat center center fixed;
+      background-size: cover;
+      z-index: -1;
+      opacity: 0.7; /* Przezroczystość obrazu tła */
+      filter: blur(1px); /* Rozmycie obrazu tła */
+    }
+
+    section {
+      background: rgba(58, 58, 58, 0.7);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: justify;
+      max-width: 70%;
+      margin: 20px;
+    }
+
+    p {
+      font-size: 1.5em;
+      margin: 0.5em 0;
+    }
+
+    a {
+      color: #09ff00;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .logo {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      width: 100px; /* Adjust the size as needed */
+      height: auto;
+    }
+  </style>
+</head>
+
+<body>
+  <section>
+    <p>We apologize for any inconvenience. At the moment, data for this location is not available online. Please reach out to KPGeo support, and we will promptly arrange the necessary photos and sketches for you. Thank you for your understanding and patience.
+    </p>
+    <p>Contact KPGeo support: <a href="mailto:support@kpgeo.pl">support@kpgeo.pl</a></p>
+  </section>
+  <img src="../img/Logo1.png" alt="Logo" class="logo">
+</body>
+
+</html>

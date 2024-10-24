@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KPGeo GCPs Locations</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.css" />
+  <link rel="stylesheet" href="lib/leaflet/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-easybutton@2/src/easy-button.css">
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'Open Sans', sans-serif;
+      font-size: 15px;
+    }
+
+    #map {
+      height: 100vh;
+      /* Dostosowuje się do widoku */
+      width: 100vw;
+      /* Dostosowuje się do widoku */
+    }
+
+    .info-table {
+      position: absolute;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.856);
+      border: 2px solid #ccc;
+      border-radius: 7px;
+      padding: 5px;
+      width: 800px;
+      height: 400px;
+      overflow-y: auto;
+      display: none;
+      z-index: 1001;
+    }
+
+    .info-table table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 2px solid #ccc;
+      border-radius: 7px;
+    }
+
+    .info-table table,
+    .info-table th,
+    .info-table td {
+      border: 1px solid rgb(83, 83, 83);
+    }
+
+    .info-table th,
+    .info-table td {
+      padding: 8px;
+      text-align: left;
+    }
+
+    .export-btns .export-btn {
+      display: inline-block;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      background-image: url(img/Export.svg);
+      background-repeat: no-repeat;
+      background-color: #fff;
+      justify-content: space-between;
+      background-color: white;
+      padding: 5px;
+      padding-left: 30px;
+      padding-right: 10px;
+      border: 2px solid #6e6e6e8e;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .toolbar {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .toolbar div {
+      margin-right: 10px;
+      padding: 6px 10px;
+      border: 2px solid #41414142;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin-top: 10px;
+    }
+
+    .toolbar div:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: #fff;
+      padding: 5px;
+      border-radius: 3px;
+      white-space: nowrap;
+      font-size: 12px;
+      z-index: 1002;
+      /* Ensure tooltip is above other elements */
+    }
+
+    .toggle-table-btn {
+      background-image: url(img/Table.svg);
+      background-repeat: no-repeat;
+      background-color: #fff;
+      width: 22px;
+      height: 32px;
+    }
+
+    .draw-polygon-btn {
+      background-image: url(img/Draw.svg);
+      background-repeat: no-repeat;
+      background-color: #fff;
+      width: 22px;
+      height: 32px;
+    }
+
+    .clear-polygons-btn {
+      background-image: url(img/Trash.svg);
+      background-repeat: no-repeat;
+      background-color: #fff;
+      width: 22px;
+      height: 32px;
+    }
+
+    .leaflet-control-layers-toggle {
+      background-image: url(img/Layers.svg);
+      background-repeat: no-repeat;
+      width: 22px;
+      height: 32px;
+    }
+
+    .no-data-msg {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+      margin-top: 40px;
+    }
+
+    .leaflet-control-coordinates {
+      background: white;
+      border: 1.5px solid #6e6e6e8e;
+      border-radius: 4px;
+      box-shadow: none;
+      cursor: pointer;
+      padding: 2px 5px;
+    }
+
+    .easy-button-button {
+      background: url(img/Home.svg) no-repeat center center;
+      background-size: 20px 20px; /* Adjust as needed */
+      width: 30px; /* Adjust as needed */
+      height: 30px; /* Adjust as needed */
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="map"></div>
+
+  <div class="toolbar">
+    <div id="draw-polygon-btn" class="draw-polygon-btn" data-tooltip="Draw area with GCPs"></div>
+    <div id="toggle-table-btn" class="toggle-table-btn" data-tooltip="Show table with selected GCPs"></div>
+    <div id="clear-polygons-btn" class="clear-polygons-btn" data-tooltip="Clear drawn polygons"></div>
+  </div>
+
+  <div class="info-table"></div>
+
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet-easybutton@2/src/easy-button.js"></script>
+  <script src="lib/leaflet/Control.Coordinates.js"></script>
+  <!--ESRI Leaflet-->
+  <!-- <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
+  <script src="https://unpkg.com/esri-leaflet-vector@4.0.2/dist/esri-leaflet-vector.js"></script> -->
+  <script>
+    // Załaduj plik GeoJSON za pomocą AJAX
+    fetch('data/KPGEO_GCP.geojson')
+      .then(response => response.json())
+      .then(data => {
+
+        // Deklaracja warstw bazowych
+        var CartoDB_Positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          maxZoom: 21
+        });
+
+        var CartoDB_Voyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          maxZoom: 21
+        });
+
+        // Defininowanie niestandardowej ikony punktu oraz tworzenie mapy
+        var customIcon = L.icon({
+          iconUrl: './img/points.png',
+          iconSize: [20, 32], // rozmiar ikony w pikselach
+          iconAnchor: [10, 32] // punkt zakotwiczenia ikony, gdzie będzie wskazywana na mapie
+        });
+        // Tworzenie mapy
+        var map = L.map('map', {
+          center: [25, -10],
+          zoom: 2.5,
+          maxZoom: 21,
+          minZoom: 2.4,
+          maxBounds: [
+            [-75, -185], // Południowo-zachodni narożnik
+            [75, 185]    // Północno-wschodni narożnik
+          ],
+          maxBoundsViscosity: 1.0,
+          layers: [CartoDB_Voyager]
+        });
+
+        // Zdefiniowanie początkowych współrzędnych i poziomu zoom
+        var initialView = {
+          center: [25, -10],
+          zoom: 2.5
+        };
+
+        // Dodanie przycisku resetu widoku
+        L.easyButton('fa-home', function (btn, map) {
+          map.setView(initialView.center, initialView.zoom);
+        }, 'Reset View').addTo(map);
+
+        // Grupa punktów z markercluster
+        var markers = L.markerClusterGroup({
+          disableClusteringAtZoom: 10,
+          spiderfyOnMaxZoom: false
+        });
+
+        // Zbiór wszystkich markerów
+        var allMarkers = [];
+
+        // Dodawanie punktów do markercluster
+        data.features.forEach(feature => {
+          var marker = L.marker([feature.geometry.coordinates[1], feature.geometry.coordinates[0]], { icon: customIcon }).bindPopup(`
+      <b>Point ID:</b> ${feature.properties.PointID}
+      <br>
+      <b>Measure Date:</b> ${feature.properties.MeasDate}
+      <br>
+      <b>LAT:</b> ${feature.properties.Lat}
+      <br>
+      <b>LONG:</b> ${feature.properties.Long}
+      <br>
+      <b>RMSxy:</b> ${feature.properties.RMSxy}
+      <br>
+      <b>RMSz:</b> ${feature.properties.RMSz}
+      <br>
+      <b>GCPs Photos: </b> <a href=${feature.properties.Photos} target="_blank" rel="noopener noreferrer">Link</a>
+    `);
+          markers.addLayer(marker);
+          marker.feature = feature; // Dodanie danych feature do markera
+          allMarkers.push(marker);
+        });
+
+        // Dodawanie markercluster do mapy
+        map.addLayer(markers);
+
+        // Dodawanie kontrolki warstw
+        var baseMaps = {
+          "CartoDB Positron (Grey)": CartoDB_Positron,
+          "CartoDB Voyager": CartoDB_Voyager
+        };
+        var overlayMaps = {
+          "KPGeo GCPs Locations": markers,
+        };
+        L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+        // Logo 
+        var logo = L.control({ position: 'bottomleft' });
+        logo.onAdd = function (map) {
+          var div = L.DomUtil.create('div', 'myclass');
+          div.innerHTML = '<a href="http://www.kpgeo.pl" target="_blank"><img src="./img/Logo1.png"></a>';
+          return div;
+        }
+        logo.addTo(map);
+
+        //Współrzędne aktualizaowane po kliknięciu
+        var coord = new L.Control.Coordinates({
+          position: "bottomright",
+          precision: 5,
+        });
+
+        coord.addTo(map);
+
+        map.on('click', function (e) {
+          coord.setCoordinates(e);
+
+        });
+
+        // Dodawanie narzędzi rysowania
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        var drawControl = new L.Control.Draw({
+          edit: {
+            featureGroup: drawnItems
+          },
+          draw: {
+            polyline: false,
+            polygon: {
+              shapeOptions: {
+                color: '#6f4dff',
+                weight: 3
+              },
+              allowIntersection: false,
+              showArea: false
+            },
+            circle: false,
+            rectangle: false,
+            marker: false,
+            circlemarker: false
+          }
+        });
+
+        // Obsługa przycisku wyświetlania tabeli
+        var toggleTableBtn = L.DomUtil.get('toggle-table-btn');
+        toggleTableBtn.onclick = function () {
+          var tableContainer = document.querySelector('.info-table');
+          if (tableContainer.style.display === 'none' || tableContainer.style.display === '') {
+            if (selectedMarkers.length === 0) {
+              tableContainer.innerHTML = '<p class="no-data-msg">Please draw area with GCPs first</p>';
+            } else {
+              displayPopupTable(selectedMarkers);
+            }
+            tableContainer.style.display = 'block';
+          } else {
+            tableContainer.style.display = 'none';
+          }
+        };
+
+        // Dodanie przycisku do rysowania poligonu
+        var drawPolygonBtn = L.DomUtil.get('draw-polygon-btn');
+        drawPolygonBtn.onclick = function () {
+          new L.Draw.Polygon(map, drawControl.options.draw.polygon).enable();
+        };
+
+        // Obsługa zdarzenia rysowania
+        var selectedMarkers = [];
+        map.on(L.Draw.Event.CREATED, function (event) {
+          var layer = event.layer;
+
+          // Usuń poprzednie warstwy
+          drawnItems.clearLayers();
+          drawnItems.addLayer(layer);
+
+          // Znajdź markery w obrębie zaznaczenia
+          selectedMarkers = [];
+          var layerBounds = layer.getBounds ? layer.getBounds() : layer.getLatLngs()[0].reduce((bounds, coord) => bounds.extend(coord), L.latLngBounds());
+
+          allMarkers.forEach(marker => {
+            if (layerBounds.contains(marker.getLatLng())) {
+              selectedMarkers.push(marker.feature.properties);
+            }
+          });
+
+          // Wyświetl atrybuty w tabeli w wyskakującym oknie
+          displayPopupTable(selectedMarkers);
+        });
+
+        // Funkcja wyświetlająca tabelę w wyskakującym oknie
+        function displayPopupTable(data) {
+          var tableContainer = document.querySelector('.info-table');
+          tableContainer.innerHTML = ''; // Czyszczenie poprzedniej zawartości
+
+          var table = '<table><tr><th>Point ID</th><th>Measure Date</th><th>LAT</th><th>LONG</th><th>RMSxy</th><th>RMSz</th><th>GCPs Photos</th></tr>';
+          data.forEach(item => {
+            table += `<tr><td>${item.PointID}</td><td>${item.MeasDate}</td><td>${item.Lat}</td><td>${item.Long}</td><td>${item.RMSxy}</td><td>${item.RMSz}</td><td><a href="${item.Photos}" target="_blank" rel="noopener noreferrer">Link</a></td></tr>`;
+          });
+          table += '</table>';
+          tableContainer.innerHTML += table;
+          var exportButtons = L.DomUtil.create('div', 'export-btns', tableContainer);
+
+          var exportCSVButton = L.DomUtil.create('div', 'export-btn', exportButtons);
+          exportCSVButton.innerHTML = 'Export to CSV';
+          exportCSVButton.onclick = function () {
+            exportToCSV(data);
+          };
+
+          var exportKMLButton = L.DomUtil.create('div', 'export-btn', exportButtons);
+          exportKMLButton.innerHTML = 'Export to KML';
+          exportKMLButton.onclick = function () {
+            exportToKML(data);
+          };
+
+          // Pokaż okno tabeli
+          tableContainer.style.display = 'block';
+
+          // Obsługa kliknięcia poza tabelą
+          document.addEventListener('click', function (event) {
+            if (!tableContainer.contains(event.target) && event.target !== toggleTableBtn) {
+              tableContainer.style.display = 'none';
+            }
+          });
+        }
+
+        // Funkcjawyświetlająca tabelę w wyskakującym oknie
+        function displayPopupTable(data) {
+          var tableContainer = document.querySelector('.info-table');
+          tableContainer.innerHTML = ''; // Czyszczenie poprzedniej zawartości
+
+          var table = '<table><tr><th>Point ID</th><th>Measure Date</th><th>LAT</th><th>LONG</th><th>RMSxy</th><th>RMSz</th><th>GCPs Photos</th></tr>';
+          data.forEach(item => {
+            table += `<tr><td>${item.PointID}</td><td>${item.MeasDate}</td><td>${item.Lat}</td><td>${item.Long}</td><td>${item.RMSxy}</td><td>${item.RMSz}</td><td><a href="${item.Photos}" target="_blank" rel="noopener noreferrer">Link</a></td></tr>`;
+          });
+          table += '</table>';
+          tableContainer.innerHTML += table;
+
+          // Utwórz kontener dla przycisków eksportu nad tabelą
+          var exportButtonsContainer = document.createElement('div');
+          exportButtonsContainer.className = 'export-btns';
+          tableContainer.insertBefore(exportButtonsContainer, tableContainer.firstChild);
+
+          // Utwórz przycisk eksportu do CSV
+          var exportCSVButton = document.createElement('div');
+          exportCSVButton.className = 'export-btn';
+          exportCSVButton.innerHTML = 'Export to CSV';
+          exportCSVButton.onclick = function () {
+            exportToCSV(data);
+          };
+          exportButtonsContainer.appendChild(exportCSVButton);
+
+          // Utwórz przycisk eksportu do KML
+          var exportKMLButton = document.createElement('div');
+          exportKMLButton.className = 'export-btn';
+          exportKMLButton.innerHTML = 'Export to KML';
+          exportKMLButton.onclick = function () {
+            exportToKML(data);
+          };
+          exportButtonsContainer.appendChild(exportKMLButton);
+
+          // Pokaż okno tabeli
+          tableContainer.style.display = 'block';
+
+          // Obsługa kliknięcia poza tabelą
+          document.addEventListener('click', function (event) {
+            if (!tableContainer.contains(event.target) && event.target !== toggleTableBtn) {
+              tableContainer.style.display = 'none';
+            }
+          });
+        }
+        // Dodanie przycisku do czyszczenia narysowanych poligonów
+        var clearPolygonsBtn = L.DomUtil.get('clear-polygons-btn');
+        clearPolygonsBtn.onclick = function () {
+          drawnItems.clearLayers(); // Usuń wszystkie narysowane poligony
+          selectedMarkers = []; // Wyczyść wybrane markery
+          displayPopupTable([]); // Wyświetl pustą tabelę
+        };
+        // Funkcja eksportująca dane do CSV
+        function exportToCSV(data) {
+          var csvContent = "data:text/csv;charset=utf-8,";
+          csvContent += "Point ID,Measure Date,Lat,Long,RMSxy,RMSz,GCPs Photos\n";
+          data.forEach(function (rowArray) {
+            var row = rowArray.PointID + "," + rowArray.MeasDate + "," + rowArray.Lat + "," + rowArray.Long + "," + rowArray.RMSxy + "," + rowArray.RMSz + "," + rowArray.Photos;
+            csvContent += row + "\n";
+          });
+
+          var encodedUri = encodeURI(csvContent);
+          var link = document.createElement("a");
+          link.setAttribute("href", encodedUri);
+          link.setAttribute("download", "selected_points.csv");
+          document.body.appendChild(link); // Required for FF
+
+          link.click();
+          document.body.removeChild(link); // Clean up
+        }
+
+        // Funkcja eksportująca dane do KML
+        function exportToKML(data) {
+          var kmlContent = '<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document>';
+          data.forEach(function (rowArray) {
+            kmlContent += `
+          <Placemark>
+            <name>${rowArray.PointID}</name>
+            <description><![CDATA[
+              <b>Measure Date:</b> ${rowArray.MeasDate}<br>
+              <b>LAT:</b> ${rowArray.Lat}<br>
+              <b>LONG:</b> ${rowArray.Long}<br>
+              <b>RMSxy:</b> ${rowArray.RMSxy}<br>
+              <b>RMSz:</b> ${rowArray.RMSz}<br>
+              <b>GCPs Photos:</b> <a href="${rowArray.Photos}" target="_blank" rel="noopener noreferrer">Link</a>
+            ]]></description>
+
+            <Point>
+              <coordinates>${rowArray.Long},${rowArray.Lat},0</coordinates>
+            </Point>
+          </Placemark>
+        `;
+          });
+          kmlContent += '</Document></kml>';
+
+          var encodedUri = 'data:text/xml;charset=utf-8,' + encodeURIComponent(kmlContent);
+          var link = document.createElement("a");
+          link.setAttribute("href", encodedUri);
+          link.setAttribute("download", "selected_points.kml");
+          document.body.appendChild(link); // Required for FF
+
+          link.click();
+          document.body.removeChild(link); // Clean up
+        }
+      });
+  </script>
+</body>
+
+</html>
