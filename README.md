@@ -1,0 +1,1 @@
+KPGeo Geoportal, designed to showcase the locations where KPGeo have measured Ground Control Points (GCP). Each GCP entry includes rounded coordinates, measurement accuracy, and the date of capture, along with links to comprehensive documentation, including photos and sketches.
